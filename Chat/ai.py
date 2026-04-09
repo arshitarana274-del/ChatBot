@@ -1,6 +1,6 @@
 from transformers import pipeline
-import os
 from huggingface_hub import InferenceClient
+import os
 
 chatbot = pipeline("text-generation", model="gpt2")
 
@@ -12,7 +12,7 @@ def get_ai_response(message):
 
 client = InferenceClient(
     provider="hf-inference",
-    api_key=os.getenv("HF_TOKEN"),
+    api_key= os.getenv("HF_TOKEN"),
 )
 
 def get_sentiment(message):
