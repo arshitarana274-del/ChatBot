@@ -21,3 +21,5 @@ def get_sentiment(message):
         model="tabularisai/multilingual-sentiment-analysis"
     )
     return str(result)
+
+print("TOKEN:", os.getenv("HF_TOKEN"))
