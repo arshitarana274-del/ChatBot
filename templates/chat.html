@@ -329,11 +329,23 @@
         } else {
           url = "/chat/get-response/";
         }
-        fetch(`${url}?message=${encodeURIComponent(message)}`)
+        const sessionId = window.location.pathname.split("/")[2];
+
+        fetch(
+          `${url}?message=${encodeURIComponent(message)}&session_id=${sessionId}`,
+        )
           .then((res) => res.json())
           .then((data) => {
             typing.remove();
-            chatBox.innerHTML += `<div class="message bot">${data.response}</div>`;
+
+            if (typeof data.response === "object") {
+              chatBox.innerHTML += `<div class="message bot">
+      ${data.response.label} (${data.response.score})
+    </div>`;
+            } else {
+              chatBox.innerHTML += `<div class="message bot">${data.response}</div>`;
+            }
+
             chatBox.scrollTop = chatBox.scrollHeight;
           })
           .catch((err) => {

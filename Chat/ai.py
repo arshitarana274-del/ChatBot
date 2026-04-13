@@ -1,47 +1,113 @@
-from transformers import pipeline
 from huggingface_hub import InferenceClient
 import os
+from openai import OpenAI
 
-# Chat
-chatbot = pipeline("text-generation", model="gpt2")
-def get_ai_response(message):
-    result = chatbot(message, max_length=100, num_return_sequences=1)
-    return result[0]["generated_text"]
-
-
-# Sentiment
 client = InferenceClient(
     provider="hf-inference",
-    api_key= os.getenv("HF_TOKEN"),
+    api_key=os.getenv("HF_TOKEN"),
 )
+
+# -------------------------
+chat_client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+)
+
+# -------------------------
+# CHAT
+# -------------------------
+def get_ai_response(messages):
+    try:
+        response = chat_client.chat.completions.create(
+            model="openrouter/free",
+            messages=messages,
+            temperature=0.7
+        )
+        return response.choices[0].message.content
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+# -------------------------
+# SENTIMENT
+# -------------------------
 def get_sentiment(message):
-    result = client.text_classification(
-        message,
-        model="tabularisai/multilingual-sentiment-analysis"
-    )
-    return str(result)
+    try:
+        result = client.text_classification(
+            message,
+            model="finiteautomata/bertweet-base-sentiment-analysis",
+        )
 
-# Summarize
+        if not result:
+            return {"label": "unknown", "score": 0}
+
+        top = result[0]
+
+        return {
+            "label": top.get("label", "unknown"),
+            "score": round(top.get("score", 0), 2)
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# -------------------------
+# SUMMARY
+# -------------------------
 def get_summary(message):
-    result = client.summarization(
-        message,
-        model="facebook/bart-large-cnn"
-    )
-    return result["summary_text"]
+    try:
+        result = client.summarization(
+            message,
+            model="facebook/bart-large-cnn"
+        )
+        return result.get("summary_text", "No summary generated.")
 
-#translate
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+# -------------------------
+# TRANSLATION
+# -------------------------
 def get_translation(message):
-    result=client.translation(
-        message,
-        model="Helsinki-NLP/opus-mt-en-hi"
-    )
-    return result["translation_text"]
+    try:
+        response = chat_client.chat.completions.create(
+            model="openrouter/free",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a professional translator. Translate English to Hindi accurately. Keep meaning correct, especially for stories and context."
+                },
+                {
+                    "role": "user",
+                    "content": message
+                }
+            ],
+            temperature=0.3
+        )
 
-#generate
+        return response.choices[0].message.content
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+# -------------------------
+# GENERATION 
+# -------------------------
 def get_generation(message):
-    result = chatbot(
-        f"Generate high-quality content: {message}",
-        max_length=150,
-        num_return_sequences=1
-    )
-    return result[0]["generated_text"]
+    try:
+        response = chat_client.chat.completions.create(
+            model="openrouter/free",
+            messages=[
+                {"role": "system", "content": "Generate high-quality content."},
+                {"role": "user", "content": message}
+            ],
+            temperature=0.8
+        )
+        return response.choices[0].message.content
+
+    except Exception as e:
+        return f"Error: {str(e)}"
