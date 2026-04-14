@@ -1,3 +1,4 @@
+{% load static %}
 <!doctype html>
 <html>
   <head>
@@ -17,51 +18,80 @@
         width: 100vw;
         background: #0a0f2c;
         overflow: hidden;
-        position: relative;
+        color: white;
       }
 
-      body::before {
-        content: "";
-        position: absolute;
-        width: 60vw;
-        height: 60vw;
-        background: radial-gradient(
-          circle,
-          rgba(79, 172, 254, 0.3),
-          transparent 60%
-        );
-        filter: blur(120px);
-        animation: floatGlow 8s ease-in-out infinite alternate;
-      }
-
-      @keyframes floatGlow {
-        from {
-          transform: translate(-100px, -100px);
-        }
-        to {
-          transform: translate(100px, 100px);
-        }
-      }
-
-      .chat-container {
+      /* MAIN LAYOUT */
+      .main-container {
+        display: flex;
         width: 100vw;
         height: 100vh;
+      }
+
+      /* SIDEBAR */
+      .sidebar {
+        width: 260px;
+        background: rgba(255, 255, 255, 0.05);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 15px;
         display: flex;
         flex-direction: column;
+      }
+
+      .sidebar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .new-chat {
+        color: #00f2fe;
+        text-decoration: none;
+        font-size: 14px;
+      }
+
+      .session-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        overflow-y: auto;
+      }
+
+      .session {
+        padding: 10px;
+        border-radius: 10px;
+        text-decoration: none;
+        color: #ccc;
         background: rgba(255, 255, 255, 0.05);
+        font-size: 13px;
+        transition: 0.2s;
+      }
+
+      .session:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .session.active {
+        background: linear-gradient(90deg, #4facfe, #00f2fe);
+        color: white;
+      }
+
+      /* CHAT AREA */
+      .chat-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
         backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
         position: relative;
       }
 
-      /* HEADER */
       .chat-header {
         padding: 14px;
         display: flex;
         align-items: center;
         gap: 10px;
         background: rgba(255, 255, 255, 0.08);
-        color: white;
       }
 
       .avatar {
@@ -84,7 +114,7 @@
         color: #00ffae;
       }
 
-      /* 🔥 FLOATING TASK BAR */
+      /* TASK BAR */
       .task-bar {
         position: absolute;
         top: 80px;
@@ -94,9 +124,7 @@
         gap: 8px;
         padding: 8px 14px;
         background: rgb(67 72 110);
-        backdrop-filter: blur(10px);
         border-radius: 14px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         z-index: 5;
       }
 
@@ -108,12 +136,6 @@
         color: #ddd;
         font-size: 12px;
         cursor: pointer;
-        transition: 0.2s;
-      }
-
-      .task:hover {
-        transform: translateY(-2px);
-        background: rgba(255, 255, 255, 0.15);
       }
 
       .task.active {
@@ -121,10 +143,10 @@
         color: white;
       }
 
-      /* CHAT */
+      /* CHAT BOX */
       #chat-box {
         flex: 1;
-        padding: 120px 14px 14px; /* space for floating bar */
+        padding: 120px 14px 14px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
@@ -143,7 +165,6 @@
         align-self: flex-end;
         max-width: 40%;
         background: linear-gradient(90deg, #4facfe, #00f2fe);
-        color: white;
       }
 
       .bot {
@@ -151,37 +172,6 @@
         max-width: 50%;
         background: rgba(255, 255, 255, 0.1);
         color: #ddd;
-      }
-
-      /* typing */
-      .typing {
-        display: flex;
-        gap: 5px;
-      }
-
-      .dot {
-        width: 6px;
-        height: 6px;
-        background: #aaa;
-        border-radius: 50%;
-        animation: bounce 1.2s infinite;
-      }
-
-      .dot:nth-child(2) {
-        animation-delay: 0.2s;
-      }
-      .dot:nth-child(3) {
-        animation-delay: 0.4s;
-      }
-
-      @keyframes bounce {
-        0%,
-        100% {
-          transform: translateY(0);
-        }
-        50% {
-          transform: translateY(-6px);
-        }
       }
 
       /* INPUT */
@@ -198,77 +188,93 @@
         border: none;
         background: rgba(255, 255, 255, 0.1);
         color: white;
-        outline: none;
       }
 
       .chat-input button {
         margin-left: 8px;
         width: 40px;
-        height: 40px;
         border-radius: 10px;
         border: none;
         background: linear-gradient(90deg, #4facfe, #00f2fe);
         color: white;
         cursor: pointer;
-        transition: 0.2s;
       }
 
-      .chat-input button:hover {
-        transform: scale(1.1);
-      }
-
-      /* LOGOUT */
       .logout {
         position: absolute;
         top: 15px;
         right: 20px;
       }
-
-      .logout a {
-        color: #00f2fe;
-        text-decoration: none;
-        font-size: 13px;
-      }
-
-      .logout a:hover {
-        color: red;
-      }
     </style>
   </head>
 
   <body>
-    <div class="chat-container">
-      <div class="chat-header">
-        <div class="avatar">AI</div>
-        <div>
-          <div>AI Assistant</div>
-          <div class="status"><span class="online">●</span> Online</div>
+    <div class="main-container">
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <h3>Chats</h3>
+          <a href="/chat/new/" class="new-chat">+ New</a>
+        </div>
+
+        <div class="session-list">
+          {% for session in sessions %}
+          <a
+            href="/chat/{{ session.id }}/"
+            class="session {% if session.id == current_session.id %}active{% endif %}"
+          >
+            {{ session.title }}
+          </a>
+          {% empty %}
+          <p>No chats</p>
+          {% endfor %}
         </div>
       </div>
 
-      <!-- 🔥 FLOATING BUTTONS -->
-      <div class="task-bar">
-        <button id="chat-btn" class="task active">Chat</button>
-        <button id="sentiment-btn" class="task">Sentiment</button>
-        <button id="summarize-btn" class="task">Summarize</button>
-        <button id="generate-btn" class="task">Generate</button>
-        <button id="translate-btn" class="task">Translate</button>
-      </div>
+      <!-- CHAT -->
+      <div class="chat-container">
+        <div class="chat-header">
+          <div class="avatar">AI</div>
+          <div>
+            <div>AI Assistant</div>
+            <div class="status"><span class="online">●</span> Online</div>
+          </div>
+        </div>
 
-      <div id="chat-box"></div>
+        <!-- TASK BAR -->
+        <div class="task-bar">
+          <button id="chat-btn" class="task active">Chat</button>
+          <button id="sentiment-btn" class="task">Sentiment</button>
+          <button id="summarize-btn" class="task">Summarize</button>
+          <button id="generate-btn" class="task">Generate</button>
+          <button id="translate-btn" class="task">Translate</button>
+        </div>
 
-      <form id="chat-form" class="chat-input">
-        <input
-          type="text"
-          id="message"
-          placeholder="Ask anything..."
-          required
-        />
-        <button>➤</button>
-      </form>
+        <!-- CHAT BOX -->
+        <div id="chat-box">
+          {% for msg in history %}
+          <div
+            class="message {% if msg.role == 'user' %}user{% else %}bot{% endif %}"
+          >
+            {{ msg.content }}
+          </div>
+          {% endfor %}
+        </div>
 
-      <div class="logout">
-        <a href="/logout/">Logout</a>
+        <!-- INPUT -->
+        <form id="chat-form" class="chat-input">
+          <input
+            type="text"
+            id="message"
+            placeholder="Ask anything..."
+            required
+          />
+          <button>➤</button>
+        </form>
+
+        <div class="logout">
+          <a href="/logout/">Logout</a>
+        </div>
       </div>
     </div>
 
@@ -286,17 +292,7 @@
             .forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
 
-          if (btn.id === "sentiment-btn") {
-            currentTask = "sentiment";
-          } else if (btn.id === "summarize-btn") {
-            currentTask = "summarize";
-          } else if (btn.id === "translate-btn") {
-            currentTask = "translate";
-          } else if (btn.id === "generate-btn") {
-            currentTask = "generate";
-          } else {
-            currentTask = "chat";
-          }
+          currentTask = btn.innerText.toLowerCase();
         };
       });
 
@@ -309,48 +305,26 @@
         chatBox.innerHTML += `<div class="message user">${message}</div>`;
         input.value = "";
 
-        let typing = document.createElement("div");
-        typing.className = "message bot typing";
-        typing.innerHTML = `<div class="dot"></div><div class="dot"></div><div class="dot"></div>`;
-        chatBox.appendChild(typing);
+        let parts = window.location.pathname.split("/");
+        let sessionId = parts.length > 2 ? parts[2] : null;
 
-        chatBox.scrollTop = chatBox.scrollHeight;
-
-        let url = "";
-
-        if (currentTask === "sentiment") {
-          url = "/chat/get-sentiment/";
-        } else if (currentTask === "summarize") {
-          url = "/chat/get-summary/";
-        } else if (currentTask === "translate") {
-          url = "/chat/get-translation/";
-        } else if (currentTask === "generate") {
-          url = "/chat/get-generation/";
-        } else {
-          url = "/chat/get-response/";
-        }
-        const sessionId = window.location.pathname.split("/")[2];
+        let url = `/chat/get-${currentTask}/`;
+        if (currentTask === "chat") url = "/chat/get-response/";
 
         fetch(
           `${url}?message=${encodeURIComponent(message)}&session_id=${sessionId}`,
         )
           .then((res) => res.json())
           .then((data) => {
-            typing.remove();
+            let response = data.response;
 
-            if (typeof data.response === "object") {
-              chatBox.innerHTML += `<div class="message bot">
-      ${data.response.label} (${data.response.score})
-    </div>`;
+            if (typeof response === "object") {
+              chatBox.innerHTML += `<div class="message bot">${response.label} (${response.score})</div>`;
             } else {
-              chatBox.innerHTML += `<div class="message bot">${data.response}</div>`;
+              chatBox.innerHTML += `<div class="message bot">${response}</div>`;
             }
 
             chatBox.scrollTop = chatBox.scrollHeight;
-          })
-          .catch((err) => {
-            typing.remove();
-            chatBox.innerHTML += `<div class="message bot">Error occurred</div>`;
           });
       };
     </script>

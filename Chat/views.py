@@ -11,6 +11,10 @@ from .ai import (
 from .models import ChatMessage, ChatSession
 
 
+def home(request):
+    if request.user.is_authenticated:
+      return render(request, "home.html")
+
 # -------------------------------
 # CHAT PAGE
 # -------------------------------
