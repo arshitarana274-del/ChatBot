@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+
 from .ai import (
     get_ai_response,
     get_sentiment,
@@ -8,19 +9,44 @@ from .ai import (
     get_translation,
     get_generation
 )
+
 from .models import ChatMessage, ChatSession
+import re
 
 
+# -------------------------------
+# HELPER FUNCTION (DRY)
+# -------------------------------
+def save_chat(session, user, user_msg, bot_msg):
+    ChatMessage.objects.create(
+        user=user,
+        session=session,
+        role='user',
+        content=user_msg
+    )
+
+    ChatMessage.objects.create(
+        user=user,
+        session=session,
+        role='bot',
+        content=bot_msg
+    )
+
+
+# -------------------------------
+# HOME
+# -------------------------------
 def home(request):
     if request.user.is_authenticated:
-      return render(request, "home.html")
+              return render(request, "home.html")
+
 
 # -------------------------------
 # CHAT PAGE
 # -------------------------------
 @login_required
 def chat_view(request, session_id=None):
-    sessions = ChatSession.objects.filter(user=request.user)
+    sessions = ChatSession.objects.filter(user=request.user).order_by('-id')
 
     if session_id:
         current_session = get_object_or_404(
@@ -33,11 +59,14 @@ def chat_view(request, session_id=None):
         if not current_session:
             current_session = ChatSession.objects.create(
                 user=request.user,
-                title="First Chat"
+                title=""
             )
         return redirect('chat_session', session_id=current_session.id)
 
-    history = current_session.messages.all()
+    # 🔥 Always ordered history
+    history = ChatMessage.objects.filter(
+        session=current_session
+    ).order_by('timestamp')
 
     return render(request, "chat.html", {
         "history": history,
@@ -53,18 +82,18 @@ def chat_view(request, session_id=None):
 def new_chat(request):
     session = ChatSession.objects.create(
         user=request.user,
-        title="New Chat"
+        title=""
     )
     return redirect('chat_session', session_id=session.id)
 
 
 # -------------------------------
-# CHATBOT (WITH MEMORY)
+# CHATBOT (MAIN CHAT)
 # -------------------------------
 @login_required
 def get_response(request):
     try:
-        message_text = request.GET.get("message", "")
+        message_text = request.GET.get("message", "").strip()
         session_id = request.GET.get("session_id")
 
         if not message_text or not session_id:
@@ -85,21 +114,26 @@ def get_response(request):
         )
 
         # Update title (first message)
-        if current_session.messages.count() <= 2 and current_session.title == "New Chat":
-            current_session.title = message_text[:30] + (
-                '...' if len(message_text) > 30 else ''
-            )
+        if current_session.messages.count() == 1:
+            clean_text = message_text.strip()
+            clean_text = re.sub(r'[*#\-`]', '', clean_text)
+            clean_text = re.sub(r'\s+', ' ', clean_text)
+
+            words = clean_text.split()[:4]
+            title = " ".join(words)
+
+            current_session.title = title.capitalize()
             current_session.save()
 
-        # Fetch last 10 messages
-        past_messages = current_session.messages.all().order_by('-timestamp')[:10]
-        past_messages = reversed(past_messages)
+        # Last 10 messages for context
+        past_messages = ChatMessage.objects.filter(
+            session=current_session
+        ).order_by('-timestamp')[:10]
+
+        past_messages = list(reversed(past_messages))
 
         messages = [
-            {
-                "role": "system",
-                "content": "You are a smart, helpful AI assistant."
-            }
+            {"role": "system", "content": "You are a smart, helpful AI assistant."}
         ]
 
         for msg in past_messages:
@@ -109,7 +143,6 @@ def get_response(request):
                 "content": msg.content
             })
 
-        # Get AI reply
         reply = get_ai_response(messages)
 
         if not reply:
@@ -139,7 +172,26 @@ def get_response(request):
 def sentiment_response(request):
     try:
         message = request.GET.get("message", "")
-        return JsonResponse({"response": get_sentiment(message)})
+        session_id = request.GET.get("session_id")
+
+        current_session = get_object_or_404(
+            ChatSession,
+            id=session_id,
+            user=request.user
+        )
+
+        result = get_sentiment(message)
+
+        response_text = (
+            f"{result['label']} ({result['score']})"
+            if isinstance(result, dict)
+            else str(result)
+        )
+
+        save_chat(current_session, request.user, message, response_text)
+
+        return JsonResponse({"response": response_text})
+
     except Exception as e:
         return JsonResponse({"response": str(e)})
 
@@ -151,7 +203,20 @@ def sentiment_response(request):
 def summarize_response(request):
     try:
         message = request.GET.get("message", "")
-        return JsonResponse({"response": get_summary(message)})
+        session_id = request.GET.get("session_id")
+
+        current_session = get_object_or_404(
+            ChatSession,
+            id=session_id,
+            user=request.user
+        )
+
+        result = get_summary(message)
+
+        save_chat(current_session, request.user, message, result)
+
+        return JsonResponse({"response": result})
+
     except Exception as e:
         return JsonResponse({"response": str(e)})
 
@@ -163,7 +228,20 @@ def summarize_response(request):
 def translation_response(request):
     try:
         message = request.GET.get("message", "")
-        return JsonResponse({"response": get_translation(message)})
+        session_id = request.GET.get("session_id")
+
+        current_session = get_object_or_404(
+            ChatSession,
+            id=session_id,
+            user=request.user
+        )
+
+        result = get_translation(message)
+
+        save_chat(current_session, request.user, message, result)
+
+        return JsonResponse({"response": result})
+
     except Exception as e:
         return JsonResponse({"response": str(e)})
 
@@ -175,6 +253,19 @@ def translation_response(request):
 def generate_response(request):
     try:
         message = request.GET.get("message", "")
-        return JsonResponse({"response": get_generation(message)})
+        session_id = request.GET.get("session_id")
+
+        current_session = get_object_or_404(
+            ChatSession,
+            id=session_id,
+            user=request.user
+        )
+
+        result = get_generation(message)
+
+        save_chat(current_session, request.user, message, result)
+
+        return JsonResponse({"response": result})
+
     except Exception as e:
         return JsonResponse({"response": str(e)})

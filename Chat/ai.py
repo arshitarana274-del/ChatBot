@@ -78,7 +78,12 @@ def get_translation(message):
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a professional translator. Translate English to Hindi accurately. Keep meaning correct, especially for stories and context."
+                    "content":"You are a strict translation engine.\n"
+                               "Translate the given English text to Hindi ONLY.\n"
+                               "Do NOT generate a story.\n"
+                               "Do NOT explain.\n"
+                               "Do NOT add extra content.\n"
+                               "Return only translated text."
                 },
                 {
                     "role": "user",
