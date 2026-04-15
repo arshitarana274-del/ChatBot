@@ -128,7 +128,7 @@ def get_response(request):
         # Last 10 messages for context
         past_messages = ChatMessage.objects.filter(
             session=current_session
-        ).order_by('-timestamp')[:10]
+        ).order_by('-timestamp')[:40]
 
         past_messages = list(reversed(past_messages))
 
